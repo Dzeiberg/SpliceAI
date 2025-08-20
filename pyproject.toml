@@ -13,3 +13,5 @@ dependencies = [
     "setuptools>=80.9.0",
     "tensorflow>=2.20.0",
 ]
+[tool.uv.build-backend]
+data = { annotations = "spliceai/annotations", models = "spliceai/models" }
