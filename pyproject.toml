@@ -1,0 +1,15 @@
+[project]
+name = "spliceai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "keras>=2.0.5",
+    "numpy>=1.14.0",
+    "pandas>=0.24.2",
+    "pyfastx>=2.1.0",
+    "pysam>=0.10.0",
+    "setuptools>=80.9.0",
+    "tensorflow>=2.20.0",
+]

@@ -1,10 +1,11 @@
-from pkg_resources import resource_filename
 import pandas as pd
 import numpy as np
 from pyfastx import Fasta
 from keras.models import load_model
 import logging
 from sys import exit
+from pathlib import Path
+import tensorflow as tf
 
 INFO_FIELD_KEYS = [
     'ALLELE',
@@ -40,9 +41,11 @@ class Annotator:
     def __init__(self, ref_fasta, annotations):
 
         if annotations == 'grch37':
-            annotations = resource_filename(__name__, 'annotations/grch37.txt')
+            annotations = Path(__file__).parent / 'annotations/grch37.txt'
+            # annotations = resource_filename(__name__, 'annotations/grch37.txt')
         elif annotations == 'grch38':
-            annotations = resource_filename(__name__, 'annotations/grch38.txt')
+            # annotations = resource_filename(__name__, 'annotations/grch38.txt')
+            annotations = Path(__file__).parent / 'annotations/grch38.txt'
 
         try:
             df = pd.read_csv(annotations, sep='\t', dtype={'CHROM': object})
@@ -69,8 +72,7 @@ class Annotator:
             exit()
 
         paths = ('models/spliceai{}.h5'.format(x) for x in range(1, 6))
-        self.models = [load_model(resource_filename(__name__, x)) for x in paths]
-
+        self.models = [load_model(Path(__file__).parent / x, compile=False) for x in paths]
     def get_name_and_strand(self, chrom, pos):
 
         chrom = normalise_chrom(chrom, list(self.chroms)[0])
@@ -104,7 +106,7 @@ def one_hot_encode(seq):
     seq = seq.upper().replace('A', '\x01').replace('C', '\x02')
     seq = seq.replace('G', '\x03').replace('T', '\x04').replace('N', '\x00')
 
-    return map[np.fromstring(seq, np.int8) % 5]
+    return map[np.frombuffer(seq.encode('utf-8'), dtype=np.int8) % 5]
 
 
 def normalise_chrom(source, target):
@@ -129,9 +131,10 @@ def get_delta_scores_for_transcript(x_ref, x_alt, ref_len, alt_len, strand, cov,
     if strand == '-':
         x_ref = x_ref[:, ::-1, ::-1]
         x_alt = x_alt[:, ::-1, ::-1]
-
-    y_ref = np.mean([ann.models[m].predict(x_ref, verbose=0) for m in range(5)], axis=0)
-    y_alt = np.mean([ann.models[m].predict(x_alt, verbose=0) for m in range(5)], axis=0)
+    x_ref = tf.convert_to_tensor(x_ref, dtype=tf.float32)
+    x_alt = tf.convert_to_tensor(x_alt, dtype=tf.float32)
+    y_ref = np.mean([ann.models[m](x_ref, verbose=0) for m in range(5)], axis=0)
+    y_alt = np.mean([ann.models[m](x_alt, verbose=0) for m in range(5)], axis=0)
 
     if strand == '-':
         y_ref = y_ref[:, ::-1]
@@ -172,7 +175,7 @@ def get_delta_scores(record, ann, dist_var, mask):
     scores = []
 
     try:
-        record.chrom, record.pos, record.ref, len(record.alts)
+        _, _, _, _ = record.chrom, record.pos, record.ref, len(record.alts)
     except TypeError:
         logging.warning('Skipping record (bad input): {}'.format(record))
         return scores
@@ -333,6 +336,7 @@ def get_delta_scores(record, ann, dist_var, mask):
                     ) if any(score >= MIN_SCORE_THRESHOLD for score in (ref_acceptor_score, alt_acceptor_score, ref_donor_score, ref_acceptor_score))
                          or i in (idx_pa, idx_na, idx_pd, idx_nd)
                 ],
+
                 "SCORES_FOR_INSERTED_BASES": [] if y_alt_inserted_bases is None else [
                     {
                         "chrom": chrom,
@@ -344,7 +348,7 @@ def get_delta_scores(record, ann, dist_var, mask):
                         "AA": f"{alt_acceptor_score:{FLOAT_FORMAT}}",  # ALT acceptor score
                         "AD": f"{alt_donor_score:{FLOAT_FORMAT}}",     # ALT donor score
                     } for i, (genomic_coord, ref_base, alt_base, ref_acceptor_score, alt_acceptor_score, ref_donor_score, alt_donor_score) in enumerate(zip(
-                        inserted_bases_genomic_coords, ref_seq, alt_seq, y_ref_inserted_bases[0, :, 1], y_alt_inserted_bases[0, :, 1], y_ref_inserted_bases[0, :, 2], y_alt_inserted_bases[0, :, 2]))
+                        inserted_bases_genomic_coords, ref_seq, alt_seq, y_ref_inserted_bases[0, :, 1], y_alt_inserted_bases[0, :, 1], y_ref_inserted_bases[0, :, 2], y_alt_inserted_bases[0, :, 2])) # type: ignore
                 ],
             })
 

@@ -1,14 +1,11 @@
 import argparse
 import logging
 import pysam
-from spliceai.utils import Annotator, get_delta_scores, INFO_FIELD_KEYS
+from utils import Annotator, get_delta_scores, INFO_FIELD_KEYS
 
-try:
-    from sys.stdin import buffer as std_in
-    from sys.stdout import buffer as std_out
-except ImportError:
-    from sys import stdin as std_in
-    from sys import stdout as std_out
+
+from sys import stdin as std_in
+from sys import stdout as std_out
 
 
 def get_options():
@@ -33,13 +30,14 @@ def get_options():
                         help='mask scores representing annotated acceptor/donor gain and '
                              'unannotated acceptor/donor loss, defaults to 0')
     args = parser.parse_args()
-
     return args
 
 
-def main():
-
-    args = get_options()
+def main(**kwargs):
+    if not len(kwargs):
+        args = get_options()
+    else:
+        args = argparse.Namespace(**kwargs)
 
     if None in [args.I, args.O, args.D, args.M]:
         logging.error('Usage: spliceai [-h] [-I [input]] [-O [output]] -R reference -A annotation '
@@ -84,3 +82,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+    # main(input="examples/input.vcf",
+    #      output="examples/test_output.vcf",
+    #      reference=)
