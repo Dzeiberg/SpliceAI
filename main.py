@@ -1,7 +1,7 @@
 import argparse
 import logging
 import pysam
-from .utils import Annotator, get_delta_scores, INFO_FIELD_KEYS
+from spliceai.utils import Annotator, get_delta_scores, INFO_FIELD_KEYS
 
 
 from sys import stdin as std_in
