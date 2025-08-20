@@ -1,6 +1,6 @@
 [project]
 name = "spliceai"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,3 +14,6 @@ dependencies = [
     "setuptools-scm>=9.2.0",
     "tensorflow>=2.20.0",
 ]
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
